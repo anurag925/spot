@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>spot - Pin the Hidden Gems</title>
+  <link rel="stylesheet" href="./src/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📍</text></svg>">
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+          <circle cx="12" cy="10" r="3"></circle>
+        </svg>
+        spot
+      </div>
+      <button class="add-btn" id="add-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Add Spot
+      </button>
+    </header>
+
+    <div class="map-container">
+      <div id="map"></div>
+      <div class="category-filters">
+        <button class="filter-pill active" data-category="all">All</button>
+        <button class="filter-pill" data-category="hidden gem">Hidden Gems</button>
+        <button class="filter-pill" data-category="lookout">Lookouts</button>
+        <button class="filter-pill" data-category="food">Food</button>
+        <button class="filter-pill" data-category="meetup">Meetups</button>
+        <button class="filter-pill" data-category="other">Other</button>
+      </div>
+      <div id="empty-state" class="empty-state" style="display: none;">
+        <h3>No spots yet</h3>
+        <p>Be the first to mark something special!</p>
+      </div>
+    </div>
+
+    <div class="spot-card" id="spot-card">
+      <div class="spot-card-handle"></div>
+      <button class="close-card" id="close-card">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <div class="spot-card-header">
+        <div class="spot-marker-dot" id="card-dot"></div>
+        <div>
+          <h2 class="spot-card-title" id="card-title"></h2>
+          <span class="spot-card-category" id="card-category"></span>
+        </div>
+      </div>
+      <p class="spot-card-story" id="card-story"></p>
+      <p class="spot-card-date" id="card-date"></p>
+    </div>
+
+    <div class="modal-overlay" id="modal-overlay">
+      <div class="modal" id="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">Add a Spot</h2>
+          <button class="close-card" id="close-modal">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-map" id="modal-map"></div>
+          <div class="form-group">
+            <label class="form-label">Name your spot</label>
+            <input type="text" class="form-input" id="spot-name" placeholder="The Secret Garden, Best Tacos Ever..." maxlength="50">
+          </div>
+          <div class="form-group">
+            <label class="form-label">What's the story?</label>
+            <textarea class="form-textarea" id="spot-story" placeholder="This hidden courtyard has the best coffee... or meet under the old oak tree..." maxlength="500"></textarea>
+            <p class="form-hint">Tell people why this place matters</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <div class="category-selector">
+              <button class="category-option" data-category="hidden gem">Hidden Gem</button>
+              <button class="category-option" data-category="lookout">Lookout</button>
+              <button class="category-option" data-category="food">Food</button>
+              <button class="category-option" data-category="meetup">Meetup</button>
+              <button class="category-option" data-category="other">Other</button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="submit-btn" id="submit-btn" disabled>Drop the Pin</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="./src/main.js"></script>
+</body>
+</html>

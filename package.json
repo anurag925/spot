@@ -1,0 +1,16 @@
+{
+  "name": "spot",
+  "version": "1.0.0",
+  "description": "Pin the hidden gems - mark special locations on the map",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch server.ts",
+    "start": "bun server.ts"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.14.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.0"
+  }
+}
