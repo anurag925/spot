@@ -1,5 +1,76 @@
 import { sql } from "../db";
 
+/**
+ * @openapi
+ * /api/spots:
+ *   get:
+ *     summary: Get all spots
+ *     responses:
+ *       200:
+ *         description: List of spots
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 spots:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: { type: integer }
+ *                       name: { type: string }
+ *                       story: { type: string }
+ *                       lat: { type: number }
+ *                       lng: { type: number }
+ *                       category: { type: string }
+ *                       created_at: { type: string }
+ *   post:
+ *     summary: Create a new spot
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, lat, lng]
+ *             properties:
+ *               name: { type: string }
+ *               story: { type: string }
+ *               lat: { type: number }
+ *               lng: { type: number }
+ *               category: { type: string }
+ *     responses:
+ *       201:
+ *         description: Created spot
+ *       400:
+ *         description: Missing required fields
+ */
+
+/**
+ * @openapi
+ * /api/spots/nearby:
+ *   get:
+ *     summary: Get spots near coordinates
+ *     parameters:
+ *       - in: query
+ *         name: lat
+ *         required: true
+ *         schema: { type: number }
+ *       - in: query
+ *         name: lng
+ *         required: true
+ *         schema: { type: number }
+ *       - in: query
+ *         name: radius
+ *         schema: { type: integer, default: 5000 }
+ *     responses:
+ *       200:
+ *         description: List of nearby spots
+ *       400:
+ *         description: Missing lat/lng parameters
+ */
+
 interface CreateSpotBody {
   name: string;
   story?: string;

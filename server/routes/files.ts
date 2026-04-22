@@ -1,6 +1,42 @@
 import { sql } from "../db";
 import { uploadToS3, generateS3Key } from "../s3";
 
+/**
+ * @openapi
+ * /api/files:
+ *   post:
+ *     summary: Upload files to S3
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               files:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *               spotId:
+ *                 type: integer
+ *     responses:
+ *       201:
+ *         description: Uploaded files metadata
+ *       400:
+ *         description: No files provided
+ *   get:
+ *     summary: Get uploaded files
+ *     parameters:
+ *       - in: query
+ *         name: spotId
+ *         schema: { type: integer }
+ *         description: Filter files by spot ID
+ *     responses:
+ *       200:
+ *         description: List of files
+ */
+
 export const filesRoutes = {
   async POST(req: Request) {
     const contentType = req.headers.get("content-type") || "";
