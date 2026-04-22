@@ -1,9 +1,0 @@
-[plan]
-name = "spot"
-builder = "bun"
-
-[node]
-version = "20"
-
-[phases.start]
-cmds = ["bun run start"]
