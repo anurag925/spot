@@ -57,10 +57,11 @@ export default function App() {
         fadeAnimation: true,
       }).setView([centerLat, centerLng], DEFAULT_ZOOM);
 
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19,
-      }).addTo(map);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+          subdomains: 'abcd',
+          maxZoom: 20,
+        }).addTo(map);
 
       if (showUserLocation) {
         const userIcon = L.divIcon({
@@ -140,16 +141,18 @@ export default function App() {
   };
 
   const createMarkerIcon = useCallback((color: string) => {
-    const svg = `<svg viewBox="0 0 36 48" xmlns="http://www.w3.org/2000/svg" class="custom-marker">
-      <path d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 30 18 30s18-16.5 18-30C36 8.06 27.94 0 18 0z" fill="${color}"/>
-      <circle cx="18" cy="16" r="6" fill="white" opacity="0.9"/>
-    </svg>`;
+    const svgHTML = `
+      <div class="marker-pin" style="background-color: ${color};">
+        <svg class="marker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4"></circle>
+        </svg>
+      </div>
+    `;
     return L.divIcon({
-      html: svg,
-      className: '',
-      iconSize: [36, 48],
-      iconAnchor: [18, 48],
-      popupAnchor: [0, -48],
+      className: 'custom-marker',
+      html: svgHTML,
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
     });
   }, []);
 
