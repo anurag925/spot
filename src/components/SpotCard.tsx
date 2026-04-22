@@ -1,4 +1,4 @@
-import { Spot, CATEGORY_COLORS, CATEGORY_LABELS } from '../types';
+import { type Spot, CATEGORY_COLORS, CATEGORY_LABELS } from '../types';
 
 interface SpotCardProps {
   spot: Spot | null;

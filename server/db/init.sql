@@ -18,3 +18,16 @@ ALTER TABLE spots ADD COLUMN lng DOUBLE PRECISION GENERATED ALWAYS AS (ST_X(loca
 
 -- Spatial index for fast DWithin queries
 CREATE INDEX IF NOT EXISTS spots_location_idx ON spots USING GIST(location);
+
+-- Files table for storing uploaded file metadata
+CREATE TABLE IF NOT EXISTS files (
+  id SERIAL PRIMARY KEY,
+  original_name TEXT NOT NULL,
+  s3_key TEXT NOT NULL,
+  mime_type TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  spot_id INTEGER REFERENCES spots(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS files_spot_id_idx ON files(spot_id);

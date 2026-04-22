@@ -1,5 +1,6 @@
 import { serve } from "bun";
 import { spotsRoutes } from "./routes/spots";
+import { filesRoutes } from "./routes/files";
 import homepage from "../public/index.html";
 
 const server = serve({
@@ -7,6 +8,7 @@ const server = serve({
     "/": homepage,
     "/api/spots": spotsRoutes,
     "/api/spots/nearby": async (req) => spotsRoutes.nearby(req),
+    "/api/files": filesRoutes,
   },
 
   development: {

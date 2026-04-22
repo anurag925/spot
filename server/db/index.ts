@@ -4,7 +4,7 @@ import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
-const sql = postgres(DATABASE_URL, {
+const sql = postgres(DATABASE_URL!, {
   max: 10,
   idle_timeout: 20,
   connect_timeout: 10,
