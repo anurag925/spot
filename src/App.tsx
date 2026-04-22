@@ -34,6 +34,15 @@ export default function App() {
     const initMap = (centerLat, centerLng, showUserLocation) => {
       const map = L.map(mapRef.current, {
         zoomControl: false,
+        touchZoom: true,
+        scrollWheelZoom: true,
+        doubleClickZoom: true,
+        boxZoom: true,
+        keyboard: true,
+        dragging: true,
+        bouncingEnabled: true,
+        zoomAnimation: true,
+        fadeAnimation: true,
       }).setView([centerLat, centerLng], DEFAULT_ZOOM);
 
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -220,6 +229,42 @@ export default function App() {
     );
   };
 
+  const panMap = (direction) => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    const offset = 0.002;
+    const center = map.getCenter();
+    const zoom = map.getZoom();
+
+    switch (direction) {
+      case 'up':
+        map.setView([center.lat + offset, center.lng], zoom);
+        break;
+      case 'down':
+        map.setView([center.lat - offset, center.lng], zoom);
+        break;
+      case 'left':
+        map.setView([center.lat, center.lng - offset], zoom);
+        break;
+      case 'right':
+        map.setView([center.lat, center.lng + offset], zoom);
+        break;
+    }
+  };
+
+  const zoomIn = () => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    map.zoomIn();
+  };
+
+  const zoomOut = () => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    map.zoomOut();
+  };
+
   const enterAddMode = () => {
     setIsAddMode(true);
     setShowSpotCard(false);
@@ -375,6 +420,57 @@ export default function App() {
         React.createElement("div", { className: `confirm-bar interactive ${isAddMode ? "active" : ""}` },
           React.createElement("button", { className: "btn-secondary", onClick: exitAddMode }, "Cancel"),
           React.createElement("button", { className: "btn-primary", onClick: confirmLocation }, "Confirm Location")
+        ),
+
+        // D-Pad and Zoom controls side by side
+        React.createElement("div", { className: "map-controls-panel interactive" },
+          // D-Pad for map panning
+          React.createElement("div", { className: "map-dpad" },
+            React.createElement("div", { className: "map-dpad-row" },
+              React.createElement("button", { className: "map-dpad-btn", onClick: () => panMap('up'), title: "Move Up" },
+                React.createElement("svg", { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" },
+                  React.createElement("path", { d: "M12 19V5M5 12l7-7 7 7" })
+                )
+              )
+            ),
+            React.createElement("div", { className: "map-dpad-row" },
+              React.createElement("button", { className: "map-dpad-btn", onClick: () => panMap('left'), title: "Move Left" },
+                React.createElement("svg", { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" },
+                  React.createElement("path", { d: "M19 12H5M12 19l-7-7 7-7" })
+                )
+              ),
+              React.createElement("div", { className: "map-dpad-center" }),
+              React.createElement("button", { className: "map-dpad-btn", onClick: () => panMap('right'), title: "Move Right" },
+                React.createElement("svg", { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" },
+                  React.createElement("path", { d: "M5 12h14M12 5l7 7-7 7" })
+                )
+              )
+            ),
+            React.createElement("div", { className: "map-dpad-row" },
+              React.createElement("button", { className: "map-dpad-btn", onClick: () => panMap('down'), title: "Move Down" },
+                React.createElement("svg", { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" },
+                  React.createElement("path", { d: "M12 5v14M19 12l-7 7-7-7" })
+                )
+              )
+            )
+          ),
+
+          // Zoom controls
+          React.createElement("div", { className: "map-controls" },
+            React.createElement("button", { className: "map-control-btn", onClick: zoomIn, title: "Zoom In" },
+              React.createElement("svg", { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" },
+                React.createElement("circle", { cx: 11, cy: 11, r: 8 }),
+                React.createElement("path", { d: "M21 21l-4.35-4.35M11 8v6M8 11h6" })
+              )
+            ),
+            React.createElement("div", { className: "map-control-divider" }),
+            React.createElement("button", { className: "map-control-btn", onClick: zoomOut, title: "Zoom Out" },
+              React.createElement("svg", { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" },
+                React.createElement("circle", { cx: 11, cy: 11, r: 8 }),
+                React.createElement("path", { d: "M21 21l-4.35-4.35M8 11h6" })
+              )
+            )
+          )
         )
       ),
 
@@ -400,17 +496,17 @@ export default function App() {
                 }
               }, CATEGORY_LABELS[currentSpot.category])
             ),
-            React.createElement("button", { className: "direction-btn", onClick: () => openDirections(currentSpot), title: "Get Directions" },
-              React.createElement("svg", { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
-                React.createElement("polygon", { points: "3 11 22 2 13 21 11 13 3 11" })
-              )
-            )
           ),
           React.createElement("p", { className: "spot-card-story" },
             currentSpot.story || "No story yet, but it's definitely worth a visit!"
           ),
           React.createElement("p", { className: "spot-card-date" },
             `Added ${new Date(currentSpot.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`
+          ),
+          React.createElement("button", { className: "direction-btn", onClick: () => openDirections(currentSpot), title: "Get Directions" },
+            React.createElement("svg", { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+              React.createElement("polygon", { points: "3 11 22 2 13 21 11 13 3 11" })
+            )
           )
         )
       ),

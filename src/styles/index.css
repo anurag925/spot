@@ -47,6 +47,13 @@ body, html {
   top: 0;
   left: 0;
   z-index: 1;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 /* UI Overlay Layer */
@@ -60,6 +67,109 @@ body, html {
 }
 
 .interactive { pointer-events: auto; }
+
+/* Map Controls - Combined panel with D-pad and zoom side by side */
+.map-controls-panel {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 32px;
+  display: flex;
+  gap: 12px;
+  z-index: 1000;
+}
+
+.map-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 8px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+}
+
+.map-control-btn {
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text);
+  transition: all 0.15s;
+  pointer-events: auto;
+}
+.map-control-btn:hover {
+  background: var(--bg);
+  color: var(--primary);
+}
+.map-control-btn:active {
+  background: var(--border);
+  transform: scale(0.95);
+}
+
+.map-control-divider {
+  width: 100%;
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+/* D-Pad Controls */
+.map-dpad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 8px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+}
+
+.map-dpad-row {
+  display: flex;
+  gap: 4px;
+}
+
+.map-dpad-center {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  border-radius: 8px;
+}
+
+.map-dpad-btn {
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text);
+  transition: all 0.15s;
+  pointer-events: auto;
+  border-radius: 8px;
+}
+.map-dpad-btn:hover {
+  background: var(--bg);
+  color: var(--primary);
+}
+.map-dpad-btn:active {
+  background: var(--border);
+  transform: scale(0.95);
+}
 
 /* Header */
 header {
@@ -347,7 +457,6 @@ header {
 }
 
 .direction-btn {
-  margin-left: auto;
   background: var(--bg);
   color: var(--primary);
   border: none;
@@ -356,13 +465,12 @@ header {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  font-weight: 600;
   cursor: pointer;
   flex-shrink: 0;
   transition: all 0.2s;
   text-decoration: none;
-  position: relative;
+  z-index: 10;
+  margin-top: 16px;
 }
 .direction-btn:hover { background: #FFE9E9; transform: translateY(-2px); }
 

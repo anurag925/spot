@@ -1,17 +1,26 @@
-import { Database } from "bun:sqlite";
+import postgres from "postgres";
+import { DATABASE_URL } from "../env";
+import { readFileSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 
-const db = new Database("spot.db");
+const sql = postgres(DATABASE_URL, {
+  max: 10,
+  idle_timeout: 20,
+  connect_timeout: 10,
+});
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS spots (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    story TEXT,
-    lat REAL NOT NULL,
-    lng REAL NOT NULL,
-    category TEXT DEFAULT 'other',
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-  )
-`);
+// Run schema init on startup with error handling for idempotent operations
+const initSQL = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "init.sql"), "utf-8");
+for (const statement of initSQL.split(";").filter((s) => s.trim())) {
+  try {
+    await sql.unsafe(statement.trim());
+  } catch (err: any) {
+    // Ignore "already exists" errors for extensions and tables
+    if (!err?.message?.includes("already exists") && !err?.message?.includes("duplicate")) {
+      console.error("Init SQL error:", err.message);
+    }
+  }
+}
 
-export default db;
+export { sql };

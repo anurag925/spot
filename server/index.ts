@@ -6,6 +6,7 @@ const server = serve({
   routes: {
     "/": homepage,
     "/api/spots": spotsRoutes,
+    "/api/spots/nearby": async (req) => spotsRoutes.nearby(req),
   },
 
   development: {
