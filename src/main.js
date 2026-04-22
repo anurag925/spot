@@ -17,11 +17,17 @@ const CATEGORY_LABELS = {
 const DEFAULT_LOCATION = { lat: 25.475, lng: 91.452 };
 const DEFAULT_ZOOM = 14;
 
-let map, modalMap, modalMarker;
+let map;
 let spots = [];
 let markersLayer = [];
-let selectedCategory = 'other';
 let activeFilter = 'all';
+let currentSpot = null;
+let userLocationMarker = null;
+let userLocation = null;
+let pendingLatLng = null;
+let selectedCategory = 'hidden gem';
+let isAddMode = false;
+let spotCardJustOpened = false;
 
 function createMarkerIcon(color) {
   const svg = '<svg viewBox="0 0 36 48" xmlns="http://www.w3.org/2000/svg" class="custom-marker">' +
@@ -37,24 +43,43 @@ function createMarkerIcon(color) {
   });
 }
 
+function createUserLocationIcon() {
+  return L.divIcon({
+    html: '<div class="user-marker"><div class="user-marker-pulse"></div><div class="user-marker-dot"></div></div>',
+    className: '',
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+    popupAnchor: [0, -10]
+  });
+}
+
 function init() {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
-      (position) => initMap(position.coords.latitude, position.coords.longitude),
-      () => initMap(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng),
+      (position) => {
+        userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+        initMap(userLocation.lat, userLocation.lng, true);
+      },
+      () => initMap(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, false),
       { timeout: 5000 }
     );
   } else {
-    initMap(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng);
+    initMap(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, false);
   }
 }
 
-async function initMap(centerLat, centerLng) {
-  map = L.map('map').setView([centerLat, centerLng], DEFAULT_ZOOM);
+async function initMap(centerLat, centerLng, showUserLocation) {
+  map = L.map('map', { zoomControl: false }).setView([centerLat, centerLng], DEFAULT_ZOOM);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19
   }).addTo(map);
+
+  if (showUserLocation && userLocation) {
+    userLocationMarker = L.marker([userLocation.lat, userLocation.lng], {
+      icon: createUserLocationIcon()
+    }).addTo(map);
+  }
 
   await loadSpots();
   setupFilters();
@@ -82,7 +107,10 @@ function renderMarkers() {
     const marker = L.marker([spot.lat, spot.lng], {
       icon: createMarkerIcon(color)
     });
-    marker.on('click', () => showSpotCard(spot));
+    marker.on('click', (e) => {
+      L.DomEvent.stopPropagation(e);
+      showSpotCard(spot);
+    });
     marker.addTo(map);
     markersLayer.push(marker);
   });
@@ -90,7 +118,7 @@ function renderMarkers() {
 
 function updateEmptyState() {
   const emptyState = document.getElementById('empty-state');
-  emptyState.style.display = spots.length === 0 ? 'block' : 'none';
+  emptyState.style.display = spots.length === 0 && activeFilter === 'all' ? 'block' : 'none';
 }
 
 function setupFilters() {
@@ -100,128 +128,185 @@ function setupFilters() {
       pill.classList.add('active');
       activeFilter = pill.dataset.category;
       renderMarkers();
+      updateEmptyState();
+      closeSpotCard();
     });
   });
 }
 
 function setupEventListeners() {
-  document.getElementById('add-btn').addEventListener('click', openModal);
+  document.getElementById('add-btn').addEventListener('click', enterAddMode);
+  document.getElementById('btn-cancel-add').addEventListener('click', exitAddMode);
+  document.getElementById('btn-confirm-loc').addEventListener('click', confirmLocation);
   document.getElementById('close-card').addEventListener('click', closeSpotCard);
   document.getElementById('close-modal').addEventListener('click', closeModal);
-  document.getElementById('modal-overlay').addEventListener('click', handleOverlayClick);
-  document.getElementById('spot-name').addEventListener('input', updateSubmitBtn);
+  document.getElementById('locate-btn').addEventListener('click', locateUser);
 
   document.querySelectorAll('.category-option').forEach(opt => {
     opt.addEventListener('click', () => {
       document.querySelectorAll('.category-option').forEach(o => o.classList.remove('selected'));
       opt.classList.add('selected');
       selectedCategory = opt.dataset.category;
-      if (modalMarker) {
-        modalMarker.setIcon(createMarkerIcon(CATEGORY_COLORS[selectedCategory]));
-      }
     });
   });
 
   document.getElementById('submit-btn').addEventListener('click', submitSpot);
+
+  // Enable submit button when name has text
+  document.getElementById('spot-name').addEventListener('input', () => {
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = document.getElementById('spot-name').value.trim().length === 0;
+  });
+
+  // Close modal on overlay click
+  document.getElementById('modal-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+
+  // Map click closes spot card (but not when clicking on markers)
+  map.on('click', () => {
+    if (!isAddMode && !spotCardJustOpened) closeSpotCard();
+  });
+}
+
+function enterAddMode() {
+  isAddMode = true;
+  closeSpotCard();
+  document.getElementById('crosshair').classList.add('active');
+  document.getElementById('confirm-bar').classList.add('active');
+  document.getElementById('add-btn').style.display = 'none';
+  document.getElementById('locate-btn').style.display = 'none';
+}
+
+function exitAddMode() {
+  isAddMode = false;
+  document.getElementById('crosshair').classList.remove('active');
+  document.getElementById('confirm-bar').classList.remove('active');
+  document.getElementById('add-btn').style.display = 'flex';
+  document.getElementById('locate-btn').style.display = 'flex';
+}
+
+function confirmLocation() {
+  pendingLatLng = map.getCenter();
+  openModal();
+  exitAddMode();
 }
 
 function showSpotCard(spot) {
+  if (isAddMode) return;
+
+  currentSpot = spot;
   const card = document.getElementById('spot-card');
   document.getElementById('card-dot').style.background = CATEGORY_COLORS[spot.category] || CATEGORY_COLORS.other;
   document.getElementById('card-title').textContent = spot.name;
   document.getElementById('card-story').textContent = spot.story || 'No story yet, but it\'s definitely worth a visit!';
-  document.getElementById('card-date').textContent = new Date(spot.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const date = new Date(spot.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('card-date').textContent = 'Added ' + date;
 
   const catEl = document.getElementById('card-category');
   catEl.textContent = CATEGORY_LABELS[spot.category] || 'Other';
   catEl.style.background = CATEGORY_COLORS[spot.category] || CATEGORY_COLORS.other;
   catEl.style.color = spot.category === 'food' ? '#1A1A1A' : 'white';
 
+  // Update directions link with current location as origin
+  const directionsBtn = document.getElementById('direction-btn');
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lng}`;
+  directionsBtn.href = directionsUrl;
+  directionsBtn.onclick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    window.open(directionsUrl, '_blank', 'noopener,noreferrer');
+  };
+
   card.classList.add('visible');
+  spotCardJustOpened = true;
+  setTimeout(() => { spotCardJustOpened = false; }, 300);
+
+  // Pan map slightly to accommodate sheet on mobile
+  if (window.innerWidth < 768) {
+    map.setView([spot.lat - 0.003, spot.lng], map.getZoom());
+  }
 }
 
 function closeSpotCard() {
   document.getElementById('spot-card').classList.remove('visible');
+  currentSpot = null;
+}
+
+function locateUser() {
+  const btn = document.getElementById('locate-btn');
+
+  if (!navigator.geolocation) {
+    showToast('Geolocation is not supported by your browser');
+    return;
+  }
+
+  btn.classList.add('locating');
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const { latitude, longitude } = position.coords;
+      userLocation = { lat: latitude, lng: longitude };
+
+      if (userLocationMarker) {
+        map.removeLayer(userLocationMarker);
+      }
+
+      userLocationMarker = L.marker([latitude, longitude], {
+        icon: createUserLocationIcon()
+      }).addTo(map);
+
+      map.flyTo([latitude, longitude], 15, { duration: 1.5 });
+      btn.classList.remove('locating');
+    },
+    (error) => {
+      btn.classList.remove('locating');
+      let message = 'Unable to retrieve your location';
+      if (error.code === error.PERMISSION_DENIED) {
+        message = 'Location access denied. Please enable location permissions.';
+      }
+      showToast(message);
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
 }
 
 function openModal() {
-  const overlay = document.getElementById('modal-overlay');
-  overlay.classList.add('visible');
-
-  if (!modalMap) {
-    // Initialize map after modal becomes visible (300ms transition)
-    setTimeout(() => {
-      const mapCenter = map.getCenter();
-      modalMap = L.map('modal-map', { clearOutline: false }).setView(
-        [mapCenter.lat, mapCenter.lng],
-        map.getZoom()
-      );
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '',
-        maxZoom: 19
-      }).addTo(modalMap);
-
-      modalMap.on('click', (e) => {
-        if (modalMarker) modalMap.removeLayer(modalMarker);
-        modalMarker = L.marker(e.latlng, {
-          icon: createMarkerIcon(CATEGORY_COLORS[selectedCategory]),
-          draggable: true
-        }).addTo(modalMap);
-        modalMarker.on('dragend', updateSubmitBtn);
-        updateSubmitBtn();
-      });
-    }, 350);
-  } else {
-    setTimeout(() => modalMap.invalidateSize(), 100);
-  }
-}
-
-function closeModal() {
-  document.getElementById('modal-overlay').classList.remove('visible');
-  if (modalMap) {
-    modalMap.remove();
-    modalMap = null;
-    modalMarker = null;
-  }
+  document.getElementById('modal-overlay').classList.add('active');
   document.getElementById('spot-name').value = '';
   document.getElementById('spot-story').value = '';
   document.getElementById('submit-btn').disabled = true;
-  // Reset category selection
-  selectedCategory = 'other';
+  selectedCategory = 'hidden gem';
   document.querySelectorAll('.category-option').forEach(o => o.classList.remove('selected'));
-  document.querySelector('.category-option[data-category="other"]')?.classList.add('selected');
+  document.querySelector('.category-option[data-category="hidden gem"]').classList.add('selected');
+
+  setTimeout(() => document.getElementById('spot-name').focus(), 300);
 }
 
-function handleOverlayClick(e) {
-  if (e.target === e.currentTarget) closeModal();
-}
-
-function updateSubmitBtn() {
-  const nameInput = document.getElementById('spot-name');
-  const btn = document.getElementById('submit-btn');
-  if (!btn || !nameInput) return;
-  
-  const hasMarker = modalMarker && modalMap && modalMap.hasLayer(modalMarker);
-  const hasName = nameInput.value.trim().length > 0;
-  btn.disabled = !hasMarker || !hasName;
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('active');
+  pendingLatLng = null;
 }
 
 async function submitSpot() {
-  if (!modalMarker || !document.getElementById('spot-name').value.trim()) return;
+  if (!pendingLatLng || !document.getElementById('spot-name').value.trim()) return;
 
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
   btn.textContent = 'Dropping...';
 
-  const latlng = modalMarker.getLatLng();
+  const lat = pendingLatLng.lat;
+  const lng = pendingLatLng.lng;
+
   const res = await fetch('/api/spots', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       name: document.getElementById('spot-name').value.trim(),
       story: document.getElementById('spot-story').value.trim(),
-      lat: latlng.lat,
-      lng: latlng.lng,
+      lat: lat,
+      lng: lng,
       category: selectedCategory
     })
   });
@@ -232,11 +317,19 @@ async function submitSpot() {
     renderMarkers();
     updateEmptyState();
     closeModal();
-    map.setView([latlng.lat, latlng.lng], 15);
+    map.flyTo([lat, lng], 16);
+    showToast('Spot added successfully!');
   }
 
   btn.textContent = 'Drop the Pin';
   btn.disabled = false;
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
 document.addEventListener('DOMContentLoaded', init);
