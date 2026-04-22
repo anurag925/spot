@@ -71,8 +71,7 @@ html, body {
 /* Map Controls - Combined panel with D-pad and zoom side by side */
 .map-controls-panel {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 20px;
   bottom: 32px;
   display: flex;
   gap: 12px;
