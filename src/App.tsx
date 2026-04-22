@@ -1,11 +1,23 @@
 // @ts-nocheck
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   CATEGORY_COLORS,
   CATEGORY_LABELS,
   DEFAULT_LOCATION,
   DEFAULT_ZOOM,
-} from "./types";
+  Spot,
+} from './types';
+import {
+  Header,
+  FilterPills,
+  MapControls,
+  ConfirmBar,
+  Crosshair,
+  EmptyState,
+  SpotCard,
+  AddSpotModal,
+  Toast,
+} from './components';
 
 export default function App() {
   const mapRef = useRef(null);
@@ -13,17 +25,17 @@ export default function App() {
   const markersLayerRef = useRef([]);
   const userLocationMarkerRef = useRef(null);
 
-  const [spots, setSpots] = useState([]);
-  const [activeFilter, setActiveFilter] = useState("all");
-  const [currentSpot, setCurrentSpot] = useState(null);
+  const [spots, setSpots] = useState<Spot[]>([]);
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [currentSpot, setCurrentSpot] = useState<Spot | null>(null);
   const [userLocation, setUserLocation] = useState(null);
   const [isAddMode, setIsAddMode] = useState(false);
   const [showSpotCard, setShowSpotCard] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [pendingLatLng, setPendingLatLng] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState("hidden gem");
-  const [spotName, setSpotName] = useState("");
-  const [spotStory, setSpotStory] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState('hidden gem');
+  const [spotName, setSpotName] = useState('');
+  const [spotStory, setSpotStory] = useState('');
   const [toastMessage, setToastMessage] = useState(null);
   const [spotCardJustOpened, setSpotCardJustOpened] = useState(false);
 
@@ -31,8 +43,8 @@ export default function App() {
   useEffect(() => {
     if (mapInstanceRef.current || !mapRef.current) return;
 
-    const initMap = (centerLat, centerLng, showUserLocation) => {
-      const map = L.map(mapRef.current, {
+    const initMap = (centerLat: number, centerLng: number, showUserLocation: boolean) => {
+      const map = L.map(mapRef.current!, {
         zoomControl: false,
         touchZoom: true,
         scrollWheelZoom: true,
@@ -45,7 +57,7 @@ export default function App() {
         fadeAnimation: true,
       }).setView([centerLat, centerLng], DEFAULT_ZOOM);
 
-      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19,
       }).addTo(map);
@@ -53,7 +65,7 @@ export default function App() {
       if (showUserLocation) {
         const userIcon = L.divIcon({
           html: '<div class="user-marker"><div class="user-marker-pulse"></div><div class="user-marker-dot"></div></div>',
-          className: "",
+          className: '',
           iconSize: [40, 40],
           iconAnchor: [20, 20],
           popupAnchor: [0, -10],
@@ -67,12 +79,12 @@ export default function App() {
       mapInstanceRef.current = map;
     };
 
-    const loadMap = (centerLat, centerLng, showUserLocation) => {
+    const loadMap = (centerLat: number, centerLng: number, showUserLocation: boolean) => {
       if (!window.L) {
-        const script = document.createElement("script");
-        script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-        script.integrity = "sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=";
-        script.crossOrigin = "";
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
+        script.crossOrigin = '';
         script.onload = () => initMap(centerLat, centerLng, showUserLocation);
         document.head.appendChild(script);
       } else {
@@ -119,22 +131,22 @@ export default function App() {
 
   const loadSpots = async () => {
     try {
-      const res = await fetch("/api/spots");
+      const res = await fetch('/api/spots');
       const data = await res.json();
       setSpots(data.spots || []);
     } catch (error) {
-      console.error("Failed to load spots:", error);
+      console.error('Failed to load spots:', error);
     }
   };
 
-  const createMarkerIcon = useCallback((color) => {
+  const createMarkerIcon = useCallback((color: string) => {
     const svg = `<svg viewBox="0 0 36 48" xmlns="http://www.w3.org/2000/svg" class="custom-marker">
       <path d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 30 18 30s18-16.5 18-30C36 8.06 27.94 0 18 0z" fill="${color}"/>
       <circle cx="18" cy="16" r="6" fill="white" opacity="0.9"/>
     </svg>`;
     return L.divIcon({
       html: svg,
-      className: "",
+      className: '',
       iconSize: [36, 48],
       iconAnchor: [18, 48],
       popupAnchor: [0, -48],
@@ -144,14 +156,14 @@ export default function App() {
   const createUserLocationIcon = useCallback(() => {
     return L.divIcon({
       html: '<div class="user-marker"><div class="user-marker-pulse"></div><div class="user-marker-dot"></div></div>',
-      className: "",
+      className: '',
       iconSize: [40, 40],
       iconAnchor: [20, 20],
       popupAnchor: [0, -10],
     });
   }, []);
 
-  const handleMarkerClick = useCallback((spot) => {
+  const handleMarkerClick = useCallback((spot: Spot) => {
     setSpotCardJustOpened(true);
     setCurrentSpot(spot);
     setShowSpotCard(true);
@@ -163,10 +175,10 @@ export default function App() {
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    markersLayerRef.current.forEach((marker) => map.removeLayer(marker));
+    markersLayerRef.current.forEach((marker: L.Marker) => map.removeLayer(marker));
     markersLayerRef.current = [];
 
-    const filteredSpots = activeFilter === "all"
+    const filteredSpots = activeFilter === 'all'
       ? spots
       : spots.filter((s) => s.category === activeFilter);
 
@@ -176,7 +188,7 @@ export default function App() {
         icon: createMarkerIcon(color),
       });
 
-      marker.on("click", (e) => {
+      marker.on('click', (e: L.LeafletMouseEvent) => {
         L.DomEvent.stopPropagation(e);
         handleMarkerClick(spot);
       });
@@ -188,12 +200,12 @@ export default function App() {
 
   const locateUser = () => {
     if (!navigator.geolocation) {
-      showToast("Geolocation is not supported by your browser");
+      showToast('Geolocation is not supported by your browser');
       return;
     }
 
-    const btn = document.getElementById("locate-btn");
-    btn?.classList.add("locating");
+    const btn = document.getElementById('locate-btn');
+    btn?.classList.add('locating');
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -215,13 +227,13 @@ export default function App() {
         userLocationMarkerRef.current = marker;
         map.flyTo([latitude, longitude], 15, { duration: 1.5 });
 
-        btn?.classList.remove("locating");
+        btn?.classList.remove('locating');
       },
       (error) => {
-        btn?.classList.remove("locating");
-        let message = "Unable to retrieve your location";
+        btn?.classList.remove('locating');
+        let message = 'Unable to retrieve your location';
         if (error.code === error.PERMISSION_DENIED) {
-          message = "Location access denied.";
+          message = 'Location access denied.';
         }
         showToast(message);
       },
@@ -229,7 +241,7 @@ export default function App() {
     );
   };
 
-  const panMap = (direction) => {
+  const panMap = (direction: string) => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
@@ -282,9 +294,9 @@ export default function App() {
     setPendingLatLng(map.getCenter());
     setShowModal(true);
     setIsAddMode(false);
-    setSpotName("");
-    setSpotStory("");
-    setSelectedCategory("hidden gem");
+    setSpotName('');
+    setSpotStory('');
+    setSelectedCategory('hidden gem');
   };
 
   const closeModal = () => {
@@ -295,10 +307,10 @@ export default function App() {
   const submitSpot = async () => {
     if (!pendingLatLng || !spotName.trim()) return;
 
-    const btn = document.getElementById("submit-btn");
+    const btn = document.getElementById('submit-btn');
     if (btn) {
       btn.disabled = true;
-      btn.textContent = "Dropping...";
+      btn.textContent = 'Dropping...';
     }
 
     const body = {
@@ -310,9 +322,9 @@ export default function App() {
     };
 
     try {
-      const res = await fetch("/api/spots", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/spots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
 
@@ -327,261 +339,94 @@ export default function App() {
           map.flyTo([pendingLatLng.lat, pendingLatLng.lng], 16);
         }
 
-        showToast("Spot added successfully!");
+        showToast('Spot added successfully!');
       }
     } catch (error) {
-      console.error("Failed to add spot:", error);
+      console.error('Failed to add spot:', error);
     }
 
     if (btn) {
-      btn.textContent = "Drop the Pin";
+      btn.textContent = 'Drop the Pin';
       btn.disabled = false;
     }
   };
 
-  const showToast = (message) => {
+  const showToast = (message: string) => {
     setToastMessage(message);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const openDirections = (spot) => {
-    const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lng}`;
-    window.open(directionsUrl, "_blank", "noopener,noreferrer");
+  const openDirections = () => {
+    if (!currentSpot) return;
+    const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${currentSpot.lat},${currentSpot.lng}`;
+    window.open(directionsUrl, '_blank', 'noopener,noreferrer');
   };
 
-  const filteredSpots = activeFilter === "all"
+  const filteredSpots = activeFilter === 'all'
     ? spots
     : spots.filter((s) => s.category === activeFilter);
 
+  const handleModalSubmit = (data: { name: string; story: string; category: string }) => {
+    setSpotName(data.name);
+    setSpotStory(data.story);
+    setSelectedCategory(data.category);
+    submitSpot();
+  };
+
   return (
-    React.createElement("div", { className: "app" },
-      React.createElement("div", { className: "map", ref: mapRef }),
+    <div className="app">
+      <div className="map" ref={mapRef} />
 
-      // Crosshair
-      React.createElement("div", { className: `crosshair ${isAddMode ? "active" : ""}` },
-        React.createElement("div", { className: "crosshair-tooltip" }, "Drag to position"),
-        React.createElement("div", { className: "crosshair-center" })
-      ),
+      <Crosshair isActive={isAddMode} />
 
-      // UI Layer
-      React.createElement("div", { className: "ui-layer" },
-        // Header
-        React.createElement("header", { className: "interactive" },
-          React.createElement("div", { className: "logo" },
-            React.createElement("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 },
-              React.createElement("path", { d: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" }),
-              React.createElement("circle", { cx: 12, cy: 10, r: 3 })
-            ),
-            "spot"
-          ),
-          React.createElement("div", { className: "header-actions" },
-            React.createElement("button", { className: "icon-btn", id: "locate-btn", onClick: locateUser, title: "My Location" },
-              React.createElement("svg", { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 },
-                React.createElement("polygon", { points: "3 11 22 2 13 21 11 13 3 11" })
-              )
-            ),
-            React.createElement("button", { className: "add-btn", id: "add-btn", onClick: enterAddMode },
-              React.createElement("svg", { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5 },
-                React.createElement("line", { x1: 12, y1: 5, x2: 12, y2: 19 }),
-                React.createElement("line", { x1: 5, y1: 12, x2: 19, y2: 12 })
-              ),
-              "Add Spot"
-            )
-          )
-        ),
+      <div className="ui-layer">
+        <Header onLocate={locateUser} onAddSpot={enterAddMode} />
 
-        // Filters
-        React.createElement("div", { className: "filters-wrapper interactive" },
-          React.createElement("button", {
-            className: `filter-pill ${activeFilter === "all" ? "active" : ""}`,
-            onClick: () => setActiveFilter("all")
-          }, "All"),
-          ...Object.entries(CATEGORY_LABELS).map(([key, label]) =>
-            React.createElement("button", {
-              key,
-              className: `filter-pill ${activeFilter === key ? "active" : ""}`,
-              onClick: () => setActiveFilter(key)
-            },
-              React.createElement("div", { className: "dot", style: { background: CATEGORY_COLORS[key] } }),
-              `${label}s`
-            )
-          )
-        ),
+        <FilterPills
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+        />
 
-        // Empty State
-        filteredSpots.length === 0 && activeFilter === "all" && React.createElement("div", { className: "empty-state" },
-          React.createElement("h3", null, "No spots yet"),
-          React.createElement("p", null, "Be the first to mark something special!")
-        ),
+        {filteredSpots.length === 0 && activeFilter === 'all' && <EmptyState />}
 
-        React.createElement("div", { style: { flexGrow: 1 } }),
+        <div style={{ flexGrow: 1 }} />
 
-        // Confirm Bar
-        React.createElement("div", { className: `confirm-bar interactive ${isAddMode ? "active" : ""}` },
-          React.createElement("button", { className: "btn-secondary", onClick: exitAddMode }, "Cancel"),
-          React.createElement("button", { className: "btn-primary", onClick: confirmLocation }, "Confirm Location")
-        ),
+        <ConfirmBar
+          isActive={isAddMode}
+          onCancel={exitAddMode}
+          onConfirm={confirmLocation}
+        />
 
-        // D-Pad and Zoom controls side by side
-        React.createElement("div", { className: "map-controls-panel interactive" },
-          // D-Pad for map panning
-          React.createElement("div", { className: "map-dpad" },
-            React.createElement("div", { className: "map-dpad-row" },
-              React.createElement("button", { className: "map-dpad-btn", onClick: () => panMap('up'), title: "Move Up" },
-                React.createElement("svg", { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" },
-                  React.createElement("path", { d: "M12 19V5M5 12l7-7 7 7" })
-                )
-              )
-            ),
-            React.createElement("div", { className: "map-dpad-row" },
-              React.createElement("button", { className: "map-dpad-btn", onClick: () => panMap('left'), title: "Move Left" },
-                React.createElement("svg", { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" },
-                  React.createElement("path", { d: "M19 12H5M12 19l-7-7 7-7" })
-                )
-              ),
-              React.createElement("div", { className: "map-dpad-center" }),
-              React.createElement("button", { className: "map-dpad-btn", onClick: () => panMap('right'), title: "Move Right" },
-                React.createElement("svg", { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" },
-                  React.createElement("path", { d: "M5 12h14M12 5l7 7-7 7" })
-                )
-              )
-            ),
-            React.createElement("div", { className: "map-dpad-row" },
-              React.createElement("button", { className: "map-dpad-btn", onClick: () => panMap('down'), title: "Move Down" },
-                React.createElement("svg", { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" },
-                  React.createElement("path", { d: "M12 5v14M19 12l-7 7-7-7" })
-                )
-              )
-            )
-          ),
+        <MapControls
+          onPanUp={() => panMap('up')}
+          onPanDown={() => panMap('down')}
+          onPanLeft={() => panMap('left')}
+          onPanRight={() => panMap('right')}
+          onZoomIn={zoomIn}
+          onZoomOut={zoomOut}
+        />
+      </div>
 
-          // Zoom controls
-          React.createElement("div", { className: "map-controls" },
-            React.createElement("button", { className: "map-control-btn", onClick: zoomIn, title: "Zoom In" },
-              React.createElement("svg", { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" },
-                React.createElement("circle", { cx: 11, cy: 11, r: 8 }),
-                React.createElement("path", { d: "M21 21l-4.35-4.35M11 8v6M8 11h6" })
-              )
-            ),
-            React.createElement("div", { className: "map-control-divider" }),
-            React.createElement("button", { className: "map-control-btn", onClick: zoomOut, title: "Zoom Out" },
-              React.createElement("svg", { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" },
-                React.createElement("circle", { cx: 11, cy: 11, r: 8 }),
-                React.createElement("path", { d: "M21 21l-4.35-4.35M8 11h6" })
-              )
-            )
-          )
-        )
-      ),
+      <SpotCard
+        spot={currentSpot}
+        isVisible={showSpotCard}
+        onClose={() => setShowSpotCard(false)}
+        onDirections={openDirections}
+      />
 
-      // Spot Card
-      React.createElement("div", { className: `spot-card interactive ${showSpotCard ? "visible" : ""}` },
-        React.createElement("div", { className: "spot-card-handle" }),
-        React.createElement("button", { className: "close-card", onClick: () => setShowSpotCard(false) },
-          React.createElement("svg", { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 },
-            React.createElement("line", { x1: 18, y1: 6, x2: 6, y2: 18 }),
-            React.createElement("line", { x1: 6, y1: 6, x2: 18, y2: 18 })
-          )
-        ),
-        currentSpot && React.createElement(React.Fragment, { key: currentSpot.id },
-          React.createElement("div", { className: "spot-card-header" },
-            React.createElement("div", { className: "spot-marker-dot", style: { background: CATEGORY_COLORS[currentSpot.category] } }),
-            React.createElement("div", null,
-              React.createElement("h2", { className: "spot-card-title" }, currentSpot.name),
-              React.createElement("span", {
-                className: "spot-card-category",
-                style: {
-                  background: CATEGORY_COLORS[currentSpot.category],
-                  color: currentSpot.category === "food" ? "#1A1A1A" : "white"
-                }
-              }, CATEGORY_LABELS[currentSpot.category])
-            ),
-          ),
-          React.createElement("p", { className: "spot-card-story" },
-            currentSpot.story || "No story yet, but it's definitely worth a visit!"
-          ),
-          React.createElement("p", { className: "spot-card-date" },
-            `Added ${new Date(currentSpot.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`
-          ),
-          React.createElement("button", { className: "direction-btn", onClick: () => openDirections(currentSpot), title: "Get Directions" },
-            React.createElement("svg", { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
-              React.createElement("polygon", { points: "3 11 22 2 13 21 11 13 3 11" })
-            )
-          )
-        )
-      ),
+      <AddSpotModal
+        isVisible={showModal}
+        onClose={closeModal}
+        onSubmit={handleModalSubmit}
+        spotName={spotName}
+        spotStory={spotStory}
+        selectedCategory={selectedCategory}
+        onNameChange={setSpotName}
+        onStoryChange={setSpotStory}
+        onCategoryChange={setSelectedCategory}
+      />
 
-      // Add Modal
-      React.createElement("div", {
-        className: `modal-overlay ${showModal ? "active" : ""}`,
-        onClick: (e) => e.target === e.currentTarget && closeModal()
-      },
-        React.createElement("div", { className: "modal interactive" },
-          React.createElement("div", { className: "modal-header" },
-            React.createElement("h2", { className: "modal-title" }, "Spot Details"),
-            React.createElement("button", { className: "close-card", id: "close-modal", onClick: closeModal },
-              React.createElement("svg", { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 },
-                React.createElement("line", { x1: 18, y1: 6, x2: 6, y2: 18 }),
-                React.createElement("line", { x1: 6, y1: 6, x2: 18, y2: 18 })
-              )
-            )
-          ),
-          React.createElement("div", { className: "modal-body" },
-            React.createElement("div", { className: "form-group" },
-              React.createElement("label", { className: "form-label" }, "Name your spot"),
-              React.createElement("input", {
-                type: "text",
-                className: "form-input",
-                id: "spot-name",
-                placeholder: "The Secret Garden, Best Tacos Ever...",
-                maxLength: 50,
-                value: spotName,
-                onChange: (e) => setSpotName(e.target.value)
-              })
-            ),
-            React.createElement("div", { className: "form-group" },
-              React.createElement("label", { className: "form-label" }, "What's the story?"),
-              React.createElement("textarea", {
-                className: "form-textarea",
-                id: "spot-story",
-                placeholder: "This hidden courtyard has the best coffee...",
-                maxLength: 500,
-                value: spotStory,
-                onChange: (e) => setSpotStory(e.target.value)
-              }),
-              React.createElement("p", { className: "form-hint" }, "Tell people why this place matters")
-            ),
-            React.createElement("div", { className: "form-group" },
-              React.createElement("label", { className: "form-label" }, "Category"),
-              React.createElement("div", { className: "category-selector" },
-                ...Object.entries(CATEGORY_LABELS).map(([key, label]) =>
-                  React.createElement("button", {
-                    key,
-                    className: `category-option ${selectedCategory === key ? "selected" : ""}`,
-                    onClick: () => setSelectedCategory(key)
-                  },
-                    React.createElement("div", { className: "dot", style: { background: CATEGORY_COLORS[key] } }),
-                    label
-                  )
-                )
-              )
-            )
-          ),
-          React.createElement("div", { className: "modal-footer" },
-            React.createElement("button", {
-              className: "submit-btn",
-              id: "submit-btn",
-              disabled: !spotName.trim(),
-              onClick: submitSpot
-            }, "Drop the Pin")
-          )
-        )
-      ),
-
-      // Toast
-      React.createElement("div", { className: `toast ${toastMessage ? "show" : ""}` },
-        toastMessage
-      )
-    )
+      <Toast message={toastMessage} />
+    </div>
   );
 }
