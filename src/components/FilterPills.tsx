@@ -12,7 +12,7 @@ export function FilterPills({ activeFilter, onFilterChange }: FilterPillsProps) 
         className={`filter-pill ${activeFilter === 'all' ? 'active' : ''}`}
         onClick={() => onFilterChange('all')}
       >
-        All
+        All Spots
       </button>
       {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
         <button
@@ -21,7 +21,7 @@ export function FilterPills({ activeFilter, onFilterChange }: FilterPillsProps) 
           onClick={() => onFilterChange(key)}
         >
           <div className="dot" style={{ background: CATEGORY_COLORS[key] }} />
-          {label}s
+          {label}
         </button>
       ))}
     </div>
