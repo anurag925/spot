@@ -34,12 +34,17 @@ export function AddSpotModal({
 
   return (
     <div
+      className={`modal-overlay ${isVisible ? 'active' : ''}`}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="modal interactive">
         <div className="modal-header">
           <h2 className="modal-title">Spot Details</h2>
-          <button id="close-modal" onClick={onClose}>
+          <button
+            className="sheet-close"
+            style={{ position: 'static' }}
+            onClick={onClose}
+          >
             <X size={18} />
           </button>
         </div>
@@ -49,8 +54,8 @@ export function AddSpotModal({
             <label className="form-label">Name your spot</label>
             <input
               type="text"
-              id="spot-name"
-              placeholder="The Secret Garden, Best Tacos Ever..."
+              className="form-input"
+              placeholder="e.g. Secret Rooftop Garden"
               maxLength={50}
               value={spotName}
               onChange={(e) => onNameChange(e.target.value)}
@@ -60,25 +65,27 @@ export function AddSpotModal({
           <div className="form-group">
             <label className="form-label">What's the story?</label>
             <textarea
-              id="spot-story"
-              placeholder="This hidden courtyard has the best coffee..."
+              className="form-textarea"
+              placeholder="Why is this place special? How do you find it?"
               maxLength={500}
               value={spotStory}
               onChange={(e) => onStoryChange(e.target.value)}
             />
-            <p className="form-hint">Tell people why this place matters</p>
           </div>
 
           <div className="form-group">
             <label className="form-label">Category</label>
-            <div className="category-selector">
+            <div className="category-grid">
               {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
                 <button
                   key={key}
-                  className={`category-option ${selectedCategory === key ? 'selected' : ''}`}
+                  className={`cat-option ${selectedCategory === key ? 'selected' : ''}`}
                   onClick={() => onCategoryChange(key)}
                 >
-                  <div className="dot" style={{ background: CATEGORY_COLORS[key] }} />
+                  <div
+                    className="dot"
+                    style={{ background: CATEGORY_COLORS[key] }}
+                  />
                   {label}
                 </button>
               ))}
@@ -89,10 +96,11 @@ export function AddSpotModal({
         <div className="modal-footer">
           <button
             id="submit-btn"
+            className="btn-submit"
             disabled={!spotName.trim()}
             onClick={handleSubmit}
           >
-            Drop the Pin
+            Drop Pin
           </button>
         </div>
       </div>

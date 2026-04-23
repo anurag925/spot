@@ -7,8 +7,9 @@ interface FilterPillsProps {
 
 export function FilterPills({ activeFilter, onFilterChange }: FilterPillsProps) {
   return (
-    <div className="filters-wrapper interactive">
+    <div className="filters-wrapper interactive" id="filters-container">
       <button
+        className={`filter-pill ${activeFilter === 'all' ? 'active' : ''}`}
         onClick={() => onFilterChange('all')}
       >
         All Spots
@@ -16,6 +17,7 @@ export function FilterPills({ activeFilter, onFilterChange }: FilterPillsProps) 
       {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
         <button
           key={key}
+          className={`filter-pill ${activeFilter === key ? 'active' : ''}`}
           onClick={() => onFilterChange(key)}
         >
           <div className="dot" style={{ background: CATEGORY_COLORS[key] }} />

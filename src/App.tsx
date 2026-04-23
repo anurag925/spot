@@ -13,6 +13,7 @@ import {
   AddSpotModal,
   Toast,
 } from './components';
+import { Plus } from 'lucide-react';
 
 export default function App() {
   const mapRef = useRef<HTMLDivElement | null>(null);
@@ -76,10 +77,26 @@ export default function App() {
     setIsAddMode(true);
     setShowSpotCard(false);
     setCurrentSpot(null);
+    // Hide FAB and dim filters
+    const fabContainer = document.getElementById('fab-container');
+    const filtersContainer = document.getElementById('filters-container');
+    if (fabContainer) fabContainer.style.display = 'none';
+    if (filtersContainer) {
+      filtersContainer.style.opacity = '0.3';
+      (filtersContainer as HTMLElement).style.pointerEvents = 'none';
+    }
   };
 
   const exitAddMode = () => {
     setIsAddMode(false);
+    // Show FAB and restore filters
+    const fabContainer = document.getElementById('fab-container');
+    const filtersContainer = document.getElementById('filters-container');
+    if (fabContainer) fabContainer.style.display = 'block';
+    if (filtersContainer) {
+      filtersContainer.style.opacity = '1';
+      (filtersContainer as HTMLElement).style.pointerEvents = 'auto';
+    }
   };
 
   const confirmLocation = () => {
@@ -87,7 +104,7 @@ export default function App() {
     if (center) {
       map.setPendingLatLng(center.lat, center.lng);
       setShowModal(true);
-      setIsAddMode(false);
+      exitAddMode();
       setSpotName('');
       setSpotStory('');
       setSelectedCategory('hidden gem');
@@ -118,7 +135,7 @@ export default function App() {
     });
 
     if (btn) {
-      btn.textContent = 'Drop the Pin';
+      btn.textContent = 'Drop Pin';
       btn.disabled = false;
     }
 
@@ -178,6 +195,14 @@ export default function App() {
         {filteredSpots.length === 0 && activeFilter === 'all' && <EmptyState />}
 
         <div style={{ flexGrow: 1 }} />
+
+        {/* Floating Action Button */}
+        <div className="fab-container interactive" id="fab-container">
+          <button className="fab" id="btn-add-start" onClick={enterAddMode}>
+            <Plus size={20} />
+            Add Spot
+          </button>
+        </div>
 
         <ConfirmBar
           isActive={isAddMode}

@@ -8,6 +8,7 @@ interface MapInstance {
   markers: Marker[];
   userMarker: Marker | null;
   pendingLatLng: { lat: number; lng: number } | null;
+  isInitializing: boolean;
 }
 
 interface UseMapOptions {
@@ -20,12 +21,18 @@ export function useMap(options: UseMapOptions = {}) {
     markers: [],
     userMarker: null,
     pendingLatLng: null,
+    isInitializing: false,
   });
 
   const loadMapScript = useCallback((): Promise<void> => {
     return new Promise((resolve) => {
       if (window.L) {
         resolve();
+        return;
+      }
+      const existingScript = document.querySelector('script[src*="leaflet"]');
+      if (existingScript) {
+        existingScript.addEventListener('load', () => resolve(), { once: true });
         return;
       }
       const script = document.createElement('script');
@@ -38,23 +45,21 @@ export function useMap(options: UseMapOptions = {}) {
   }, []);
 
   const createMarkerIcon = useCallback((color: string) => {
-    const svgDataUrl = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3C/svg%3E`;
-    const svgHTML = `
-      <div class="marker-pin" style="background-color: ${color};">
-        <img class="marker-icon" src="${svgDataUrl}" />
-      </div>
-    `;
+    if (!window.L) return null;
+    // Use a simple marker with only text/size, no external resources
     return window.L.divIcon({
       className: 'custom-marker',
-      html: svgHTML,
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
+      html: `<div style="width:24px;height:24px;background:${color};border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
     });
   }, []);
 
   const createUserLocationIcon = useCallback(() => {
+    if (!window.L) return null;
+    const svgHTML = `<div style="width:40px;height:40px;position:relative;"><div style="width:40px;height:40px;border-radius:50%;background:rgba(0,123,255,0.3);position:absolute;animation:pulse 2s infinite;"></div><div style="width:16px;height:16px;border-radius:50%;background:#007BFF;border:3px solid white;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div></div>`;
     return window.L.divIcon({
-      html: '<div class="user-marker"><div class="user-marker-pulse"></div><div class="user-marker-dot"></div></div>',
+      html: svgHTML,
       className: '',
       iconSize: [40, 40],
       iconAnchor: [20, 20],
@@ -68,39 +73,59 @@ export function useMap(options: UseMapOptions = {}) {
     centerLng: number,
     showUserLocation: boolean
   ) => {
-    // Remove any existing map on this container (from strict mode remount)
-    if ((container as any)._leaflet_id) {
-      delete (container as any)._leaflet_id;
+    if (!window.L) return;
+
+    // Clean up existing map if any
+    if (instanceRef.current.map) {
+      instanceRef.current.map.remove();
+      instanceRef.current.map = null;
+    }
+
+    // Check if container already has a Leaflet instance
+    const existingId = (container as any)._leaflet_id;
+    if (existingId) {
       container.innerHTML = '';
+      delete (container as any)._leaflet_id;
     }
 
-    const map = window.L.map(container, {
-      zoomControl: false,
-      touchZoom: true,
-      scrollWheelZoom: true,
-      doubleClickZoom: true,
-      boxZoom: true,
-      keyboard: true,
-      dragging: true,
-      zoomAnimation: true,
-      fadeAnimation: true,
-    }).setView([centerLat, centerLng], DEFAULT_ZOOM);
+    try {
+      const map = window.L.map(container, {
+        zoomControl: false,
+        touchZoom: true,
+        scrollWheelZoom: true,
+        doubleClickZoom: true,
+        boxZoom: true,
+        keyboard: true,
+        dragging: true,
+        zoomAnimation: true,
+        fadeAnimation: true,
+      }).setView([centerLat, centerLng], DEFAULT_ZOOM);
 
-    window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-      subdomains: 'abcd',
-      maxZoom: 20,
-    }).addTo(map);
+      // Mark as loaded
+      (map as any)._loaded = true;
 
-    if (showUserLocation) {
-      const userIcon = createUserLocationIcon();
-      const marker = window.L.marker([centerLat, centerLng], {
-        icon: userIcon,
+      window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        subdomains: 'abcd',
+        maxZoom: 20,
       }).addTo(map);
-      instanceRef.current.userMarker = marker;
-    }
 
-    instanceRef.current.map = map;
+      if (showUserLocation) {
+        const userIcon = createUserLocationIcon();
+        if (userIcon) {
+          const marker = window.L.marker([centerLat, centerLng], {
+            icon: userIcon,
+          }).addTo(map);
+          instanceRef.current.userMarker = marker;
+        }
+      }
+
+      instanceRef.current.map = map;
+      instanceRef.current.isInitializing = false;
+    } catch (error) {
+      console.error('Failed to initialize map:', error);
+      instanceRef.current.isInitializing = false;
+    }
   }, [createUserLocationIcon]);
 
   const loadMap = useCallback(async (
@@ -109,9 +134,10 @@ export function useMap(options: UseMapOptions = {}) {
     centerLng: number,
     showUserLocation: boolean
   ) => {
-    // Prevent double initialization (React strict mode)
-    if (instanceRef.current.map || (container as any)._leaflet_id) return;
+    if (instanceRef.current.isInitializing) return;
+    if (instanceRef.current.map) return;
 
+    instanceRef.current.isInitializing = true;
     await loadMapScript();
     initMap(container, centerLat, centerLng, showUserLocation);
   }, [loadMapScript, initMap]);
@@ -140,8 +166,11 @@ export function useMap(options: UseMapOptions = {}) {
         map.removeLayer(instanceRef.current.userMarker);
       }
 
+      const userIcon = createUserLocationIcon();
+      if (!userIcon) return false;
+
       const marker = window.L.marker([lat, lng], {
-        icon: createUserLocationIcon(),
+        icon: userIcon,
       }).addTo(map);
 
       instanceRef.current.userMarker = marker;
@@ -201,10 +230,22 @@ export function useMap(options: UseMapOptions = {}) {
 
   const renderMarkers = useCallback((spots: Spot[], activeFilter: string) => {
     const map = instanceRef.current.map;
-    if (!map) return;
+    if (!map || !window.L || map._loaded === false) return;
+
+    // Wait for map to be fully ready
+    if (!map._tiles || map.getZoom() === undefined) {
+      setTimeout(() => renderMarkers(spots, activeFilter), 100);
+      return;
+    }
 
     // Remove existing markers
-    instanceRef.current.markers.forEach((marker) => map.removeLayer(marker));
+    instanceRef.current.markers.forEach((marker) => {
+      try {
+        map.removeLayer(marker);
+      } catch (e) {
+        // Marker might already be removed
+      }
+    });
     instanceRef.current.markers = [];
 
     const filteredSpots = activeFilter === 'all'
@@ -213,34 +254,42 @@ export function useMap(options: UseMapOptions = {}) {
 
     filteredSpots.forEach((spot: Spot) => {
       const color = CATEGORY_COLORS[spot.category] || CATEGORY_COLORS.other;
-      const marker = window.L.marker([spot.lat, spot.lng], {
-        icon: createMarkerIcon(color),
-      });
+      const icon = createMarkerIcon(color);
+      if (!icon) return;
+
+      const marker = window.L.marker([spot.lat, spot.lng], { icon });
 
       marker.on('click', (e: LeafletMouseEvent) => {
         window.L.DomEvent.stopPropagation(e);
         options.onMarkerClick?.(spot);
       });
 
-      marker.addTo(map);
-      instanceRef.current.markers.push(marker);
+      try {
+        marker.addTo(map);
+        instanceRef.current.markers.push(marker);
+      } catch (error) {
+        console.error('Failed to add marker:', error);
+      }
     });
   }, [createMarkerIcon, options]);
 
   const remove = useCallback(() => {
     if (instanceRef.current.map) {
-      instanceRef.current.map.remove();
+      try {
+        instanceRef.current.map.remove();
+      } catch (e) {
+        // Map might already be removed
+      }
       instanceRef.current.map = null;
     }
   }, []);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (instanceRef.current.map) {
-        instanceRef.current.map.remove();
-      }
+      remove();
     };
-  }, []);
+  }, [remove]);
 
   return {
     loadMap,

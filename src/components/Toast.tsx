@@ -1,7 +1,7 @@
-interface ToastProps {
-  message: string | null;
-}
-
-export function Toast({ message }: ToastProps) {
-  return <div>{message}</div>;
+export function Toast({ message }: { message: string | null }) {
+  return (
+    <div className={`toast ${message ? 'show' : ''}`} id="toast">
+      {message}
+    </div>
+  );
 }
