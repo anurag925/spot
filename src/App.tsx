@@ -1,11 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  CATEGORY_COLORS,
-  CATEGORY_LABELS,
-  DEFAULT_LOCATION,
-  DEFAULT_ZOOM,
-  Spot,
-} from './types';
+import type { Spot } from './types';
+import { DEFAULT_LOCATION } from './types';
+import { useToast, useSpots, useMap } from './hooks';
 import {
   Header,
   FilterPills,
@@ -19,264 +15,62 @@ import {
 } from './components';
 
 export default function App() {
-  const mapRef = useRef(null);
-  const mapInstanceRef = useRef(null);
-  const markersLayerRef = useRef([]);
-  const userLocationMarkerRef = useRef(null);
+  const mapRef = useRef<HTMLDivElement | null>(null);
 
-  const [spots, setSpots] = useState<Spot[]>([]);
+  // UI state
   const [activeFilter, setActiveFilter] = useState('all');
   const [currentSpot, setCurrentSpot] = useState<Spot | null>(null);
-  const [userLocation, setUserLocation] = useState(null);
   const [isAddMode, setIsAddMode] = useState(false);
   const [showSpotCard, setShowSpotCard] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [pendingLatLng, setPendingLatLng] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('hidden gem');
   const [spotName, setSpotName] = useState('');
   const [spotStory, setSpotStory] = useState('');
-  const [toastMessage, setToastMessage] = useState(null);
-  const [spotCardJustOpened, setSpotCardJustOpened] = useState(false);
 
-  // Initialize map with user location
-  useEffect(() => {
-    if (mapInstanceRef.current || !mapRef.current) return;
+  // Hooks
+  const { spots, loadSpots, createSpot } = useSpots();
+  const { message: toastMessage, showToast } = useToast();
 
-    const initMap = (centerLat: number, centerLng: number, showUserLocation: boolean) => {
-      const map = L.map(mapRef.current!, {
-        zoomControl: false,
-        touchZoom: true,
-        scrollWheelZoom: true,
-        doubleClickZoom: true,
-        boxZoom: true,
-        keyboard: true,
-        dragging: true,
-        bouncingEnabled: true,
-        zoomAnimation: true,
-        fadeAnimation: true,
-      }).setView([centerLat, centerLng], DEFAULT_ZOOM);
-
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-          subdomains: 'abcd',
-          maxZoom: 20,
-        }).addTo(map);
-
-      if (showUserLocation) {
-        const userIcon = L.divIcon({
-          html: '<div class="user-marker"><div class="user-marker-pulse"></div><div class="user-marker-dot"></div></div>',
-          className: '',
-          iconSize: [40, 40],
-          iconAnchor: [20, 20],
-          popupAnchor: [0, -10],
-        });
-        const marker = L.marker([centerLat, centerLng], {
-          icon: userIcon,
-        }).addTo(map);
-        userLocationMarkerRef.current = marker;
-      }
-
-      mapInstanceRef.current = map;
-    };
-
-    const loadMap = (centerLat: number, centerLng: number, showUserLocation: boolean) => {
-      if (!window.L) {
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-        script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
-        script.crossOrigin = '';
-        script.onload = () => initMap(centerLat, centerLng, showUserLocation);
-        document.head.appendChild(script);
-      } else {
-        initMap(centerLat, centerLng, showUserLocation);
-      }
-    };
-
-    // Try to get user's location on first load
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setUserLocation({ lat: latitude, lng: longitude });
-          loadMap(latitude, longitude, true);
-        },
-        () => {
-          loadMap(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, false);
-        },
-        { timeout: 5000 }
-      );
-    } else {
-      loadMap(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, false);
-    }
-
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
+  const handleMarkerClick = useCallback((spot: Spot) => {
+    setCurrentSpot(spot);
+    setShowSpotCard(true);
   }, []);
+
+  const map = useMap({ onMarkerClick: handleMarkerClick });
+
+  // Initialize map on mount
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    const init = async () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            map.loadMap(mapRef.current!, latitude, longitude, true);
+          },
+          () => {
+            map.loadMap(mapRef.current!, DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, false);
+          },
+          { timeout: 5000 }
+        );
+      } else {
+        map.loadMap(mapRef.current!, DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, false);
+      }
+    };
+
+    init();
+  }, [map]);
 
   // Load spots on mount
   useEffect(() => {
     loadSpots();
-  }, []);
+  }, [loadSpots]);
 
   // Render markers when spots or filter change
   useEffect(() => {
-    if (mapInstanceRef.current) {
-      renderMarkers();
-    }
-  }, [spots, activeFilter]);
-
-  const loadSpots = async () => {
-    try {
-      const res = await fetch('/api/spots');
-      const data = await res.json();
-      setSpots(data.spots || []);
-    } catch (error) {
-      console.error('Failed to load spots:', error);
-    }
-  };
-
-  const createMarkerIcon = useCallback((color: string) => {
-    const svgDataUrl = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3C/svg%3E`;
-    const svgHTML = `
-      <div class="marker-pin" style="background-color: ${color};">
-        <img class="marker-icon" src="${svgDataUrl}" />
-      </div>
-    `;
-    return L.divIcon({
-      className: 'custom-marker',
-      html: svgHTML,
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
-    });
-  }, []);
-
-  const createUserLocationIcon = useCallback(() => {
-    return L.divIcon({
-      html: '<div class="user-marker"><div class="user-marker-pulse"></div><div class="user-marker-dot"></div></div>',
-      className: '',
-      iconSize: [40, 40],
-      iconAnchor: [20, 20],
-      popupAnchor: [0, -10],
-    });
-  }, []);
-
-  const handleMarkerClick = useCallback((spot: Spot) => {
-    setSpotCardJustOpened(true);
-    setCurrentSpot(spot);
-    setShowSpotCard(true);
-
-    setTimeout(() => setSpotCardJustOpened(false), 300);
-  }, []);
-
-  const renderMarkers = useCallback(() => {
-    const map = mapInstanceRef.current;
-    if (!map) return;
-
-    markersLayerRef.current.forEach((marker: L.Marker) => map.removeLayer(marker));
-    markersLayerRef.current = [];
-
-    const filteredSpots = activeFilter === 'all'
-      ? spots
-      : spots.filter((s) => s.category === activeFilter);
-
-    filteredSpots.forEach((spot) => {
-      const color = CATEGORY_COLORS[spot.category] || CATEGORY_COLORS.other;
-      const marker = L.marker([spot.lat, spot.lng], {
-        icon: createMarkerIcon(color),
-      });
-
-      marker.on('click', (e: L.LeafletMouseEvent) => {
-        L.DomEvent.stopPropagation(e);
-        handleMarkerClick(spot);
-      });
-
-      marker.addTo(map);
-      markersLayerRef.current.push(marker);
-    });
-  }, [spots, activeFilter, createMarkerIcon, handleMarkerClick]);
-
-  const locateUser = () => {
-    if (!navigator.geolocation) {
-      showToast('Geolocation is not supported by your browser');
-      return;
-    }
-
-    const btn = document.getElementById('locate-btn');
-    btn?.classList.add('locating');
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const location = { lat: latitude, lng: longitude };
-        setUserLocation(location);
-
-        const map = mapInstanceRef.current;
-        if (!map) return;
-
-        if (userLocationMarkerRef.current) {
-          map.removeLayer(userLocationMarkerRef.current);
-        }
-
-        const marker = L.marker([latitude, longitude], {
-          icon: createUserLocationIcon(),
-        }).addTo(map);
-
-        userLocationMarkerRef.current = marker;
-        map.flyTo([latitude, longitude], 15, { duration: 1.5 });
-
-        btn?.classList.remove('locating');
-      },
-      (error) => {
-        btn?.classList.remove('locating');
-        let message = 'Unable to retrieve your location';
-        if (error.code === error.PERMISSION_DENIED) {
-          message = 'Location access denied.';
-        }
-        showToast(message);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  };
-
-  const panMap = (direction: string) => {
-    const map = mapInstanceRef.current;
-    if (!map) return;
-
-    const offset = 0.002;
-    const center = map.getCenter();
-    const zoom = map.getZoom();
-
-    switch (direction) {
-      case 'up':
-        map.setView([center.lat + offset, center.lng], zoom);
-        break;
-      case 'down':
-        map.setView([center.lat - offset, center.lng], zoom);
-        break;
-      case 'left':
-        map.setView([center.lat, center.lng - offset], zoom);
-        break;
-      case 'right':
-        map.setView([center.lat, center.lng + offset], zoom);
-        break;
-    }
-  };
-
-  const zoomIn = () => {
-    const map = mapInstanceRef.current;
-    if (!map) return;
-    map.zoomIn();
-  };
-
-  const zoomOut = () => {
-    const map = mapInstanceRef.current;
-    if (!map) return;
-    map.zoomOut();
-  };
+    map.renderMarkers(spots, activeFilter);
+  }, [spots, activeFilter, map]);
 
   const enterAddMode = () => {
     setIsAddMode(true);
@@ -289,72 +83,65 @@ export default function App() {
   };
 
   const confirmLocation = () => {
-    const map = mapInstanceRef.current;
-    if (!map) return;
-
-    setPendingLatLng(map.getCenter());
-    setShowModal(true);
-    setIsAddMode(false);
-    setSpotName('');
-    setSpotStory('');
-    setSelectedCategory('hidden gem');
+    const center = map.getCenter?.();
+    if (center) {
+      map.setPendingLatLng(center.lat, center.lng);
+      setShowModal(true);
+      setIsAddMode(false);
+      setSpotName('');
+      setSpotStory('');
+      setSelectedCategory('hidden gem');
+    }
   };
 
   const closeModal = () => {
     setShowModal(false);
-    setPendingLatLng(null);
+    map.setPendingLatLng(0, 0);
   };
 
   const submitSpot = async () => {
-    if (!pendingLatLng || !spotName.trim()) return;
+    const pending = map.pendingLatLng;
+    if (!pending || !spotName.trim()) return;
 
-    const btn = document.getElementById('submit-btn');
+    const btn = document.getElementById('submit-btn') as HTMLButtonElement | null;
     if (btn) {
       btn.disabled = true;
       btn.textContent = 'Dropping...';
     }
 
-    const body = {
+    const spot = await createSpot({
       name: spotName.trim(),
       story: spotStory.trim(),
-      lat: pendingLatLng.lat,
-      lng: pendingLatLng.lng,
+      lat: pending.lat,
+      lng: pending.lng,
       category: selectedCategory,
-    };
-
-    try {
-      const res = await fetch('/api/spots', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setSpots((prev) => [data.spot, ...prev]);
-        closeModal();
-        renderMarkers();
-
-        const map = mapInstanceRef.current;
-        if (map) {
-          map.flyTo([pendingLatLng.lat, pendingLatLng.lng], 16);
-        }
-
-        showToast('Spot added successfully!');
-      }
-    } catch (error) {
-      console.error('Failed to add spot:', error);
-    }
+    });
 
     if (btn) {
       btn.textContent = 'Drop the Pin';
       btn.disabled = false;
     }
+
+    if (spot) {
+      setShowModal(false);
+      map.setPendingLatLng(0, 0);
+      map.renderMarkers(spots, activeFilter);
+      map.flyTo(spot.lat, spot.lng, 16);
+      showToast('Spot added successfully!');
+    }
   };
 
-  const showToast = (message: string) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(null), 3000);
+  const locateUser = async () => {
+    const btn = document.getElementById('locate-btn');
+    btn?.classList.add('locating');
+
+    const success = await map.locateUser();
+
+    btn?.classList.remove('locating');
+
+    if (!success) {
+      showToast('Unable to retrieve your location');
+    }
   };
 
   const openDirections = () => {
@@ -399,12 +186,12 @@ export default function App() {
         />
 
         <MapControls
-          onPanUp={() => panMap('up')}
-          onPanDown={() => panMap('down')}
-          onPanLeft={() => panMap('left')}
-          onPanRight={() => panMap('right')}
-          onZoomIn={zoomIn}
-          onZoomOut={zoomOut}
+          onPanUp={() => map.panMap('up')}
+          onPanDown={() => map.panMap('down')}
+          onPanLeft={() => map.panMap('left')}
+          onPanRight={() => map.panMap('right')}
+          onZoomIn={map.zoomIn}
+          onZoomOut={map.zoomOut}
         />
       </div>
 
