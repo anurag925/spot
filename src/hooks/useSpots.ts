@@ -1,14 +1,20 @@
 import { useState, useCallback } from 'react';
 import type { Spot, CreateSpotBody } from '../types';
 
+const NEARBY_RADIUS_METERS = 100000; // 100km
+
 export function useSpots() {
   const [spots, setSpots] = useState<Spot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const loadSpots = useCallback(async () => {
+  const loadSpots = useCallback(async (lat?: number, lng?: number) => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/spots');
+      let url = '/api/spots';
+      if (lat !== undefined && lng !== undefined) {
+        url = `/api/spots/nearby?lat=${lat}&lng=${lng}&radius=${NEARBY_RADIUS_METERS}`;
+      }
+      const res = await fetch(url);
       const data = await res.json();
       setSpots(data.spots || []);
     } catch (error) {

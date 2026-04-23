@@ -29,46 +29,63 @@ export function MapControls({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Configuration based on screen size
   const cellSize = isMobile ? '36px' : '44px';
   const iconSize = isMobile ? 16 : 18;
   const gap = isMobile ? '4px' : '6px';
   const panelPadding = isMobile ? '8px' : '12px';
   const bottomPos = isMobile ? '100px' : '120px';
 
+  // Common button style to reduce repetition
+  const baseButtonStyle: React.CSSProperties = {
+    width: cellSize,
+    height: cellSize,
+    borderRadius: '10px',
+    background: 'white',
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#333',
+    transition: 'background-color 0.2s',
+  };
+
+  // Hover effect handling would ideally be done via CSS classes, 
+  // but for inline styles, we keep it simple or add onMouseEnter/Leave if needed.
+  // Assuming .icon-btn class handles hover states in your global CSS.
+
   return (
-    <>
-      {/* Locate Button - positioned above and to the far right */}
-      <button
-        id="locate-btn"
-        className="icon-btn"
-        onClick={onLocate}
-        title="My Location"
-        style={{
-          position: 'fixed',
-          bottom: isMobile ? '108px' : '130px',
-          right: '20px',
-          width: cellSize,
-          height: cellSize,
-          borderRadius: '10px',
-          zIndex: 16,
-          background: 'white',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Crosshair size={iconSize} strokeWidth={2} />
-      </button>
+    <div
+      style={{
+        position: 'fixed',
+        bottom: bottomPos,
+        right: '20px',
+        zIndex: 15,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        gap: '8px',
+      }}
+    >
+      {/* Locate Button */}
+      <div className="interactive">
+        <button
+          id="locate-btn"
+          className="icon-btn"
+          onClick={onLocate}
+          title="My Location"
+          aria-label="Center map on my location"
+          style={baseButtonStyle}
+        >
+          <Crosshair size={iconSize} strokeWidth={2} />
+        </button>
+      </div>
 
       {/* D-Pad + Zoom panel */}
       <div
         className="map-controls-panel interactive"
         style={{
-          position: 'fixed',
-          bottom: bottomPos,
-          right: '20px',
-          zIndex: 15,
           display: 'flex',
           flexDirection: 'column',
           gap: '8px',
@@ -80,7 +97,8 @@ export function MapControls({
       >
         {/* Single row: D-Pad on left, vertical divider, Zoom on right */}
         <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-          {/* D-Pad */}
+          
+          {/* D-Pad Grid */}
           <div
             style={{
               display: 'grid',
@@ -89,29 +107,68 @@ export function MapControls({
               gap: gap,
             }}
           >
+            {/* Top Row */}
             <div />
-            <button onClick={onPanUp} className="icon-btn" style={{ width: cellSize, height: cellSize, borderRadius: '10px' }} title="Move Up">
+            <button 
+              onClick={onPanUp} 
+              className="icon-btn" 
+              style={baseButtonStyle} 
+              title="Move Up"
+              aria-label="Pan up"
+            >
               <ArrowUp size={iconSize} />
             </button>
             <div />
-            <button onClick={onPanLeft} className="icon-btn" style={{ width: cellSize, height: cellSize, borderRadius: '10px' }} title="Move Left">
+
+            {/* Middle Row */}
+            <button 
+              onClick={onPanLeft} 
+              className="icon-btn" 
+              style={baseButtonStyle} 
+              title="Move Left"
+              aria-label="Pan left"
+            >
               <ArrowLeft size={iconSize} />
             </button>
+            
+            {/* Center Spacer/Divider Background */}
             <div style={{ background: '#f0f0f0', borderRadius: '10px' }} />
-            <button onClick={onPanRight} className="icon-btn" style={{ width: cellSize, height: cellSize, borderRadius: '10px' }} title="Move Right">
+            
+            <button 
+              onClick={onPanRight} 
+              className="icon-btn" 
+              style={baseButtonStyle} 
+              title="Move Right"
+              aria-label="Pan right"
+            >
               <ArrowRight size={iconSize} />
             </button>
+
+            {/* Bottom Row */}
             <div />
-            <button onClick={onPanDown} className="icon-btn" style={{ width: cellSize, height: cellSize, borderRadius: '10px' }} title="Move Down">
+            <button 
+              onClick={onPanDown} 
+              className="icon-btn" 
+              style={baseButtonStyle} 
+              title="Move Down"
+              aria-label="Pan down"
+            >
               <ArrowDown size={iconSize} />
             </button>
             <div />
           </div>
 
           {/* Vertical Divider */}
-          <div style={{ width: '1px', height: `calc(3 * ${cellSize} + 2 * ${gap})`, background: '#e5e5e5' }} />
+          <div 
+            style={{ 
+              width: '1px', 
+              height: `calc(3 * ${cellSize} + 2 * ${gap})`, 
+              background: '#e5e5e5',
+              alignSelf: 'stretch' // Ensures it aligns correctly if heights vary slightly
+            }} 
+          />
 
-          {/* Zoom */}
+          {/* Zoom Controls */}
           <div
             style={{
               display: 'flex',
@@ -123,22 +180,27 @@ export function MapControls({
             <button
               onClick={onZoomIn}
               className="icon-btn"
-              style={{ width: cellSize, height: cellSize, borderRadius: '10px' }}
+              style={baseButtonStyle}
               title="Zoom In"
+              aria-label="Zoom in"
             >
               <Plus size={iconSize} />
             </button>
+            
+            {/* Spacer to push Zoom Out to bottom if needed, or just space-between handles it */}
+            
             <button
               onClick={onZoomOut}
               className="icon-btn"
-              style={{ width: cellSize, height: cellSize, borderRadius: '10px' }}
+              style={baseButtonStyle}
               title="Zoom Out"
+              aria-label="Zoom out"
             >
               <Minus size={iconSize} />
             </button>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

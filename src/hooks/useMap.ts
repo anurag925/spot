@@ -157,7 +157,20 @@ export function useMap(options: UseMapOptions = {}) {
 
   const locateUser = useCallback(async (): Promise<boolean> => {
     const map = instanceRef.current.map;
-    if (!map) return false;
+
+    // Wait for map to be ready (up to 2 seconds)
+    if (!map) {
+      let waited = 0;
+      while (!map && waited < 2000) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        waited += 100;
+      }
+    }
+
+    if (!map) {
+      console.warn('locateUser: map not ready after waiting');
+      return false;
+    }
 
     try {
       const { lat, lng } = await getUserLocation();
@@ -176,7 +189,8 @@ export function useMap(options: UseMapOptions = {}) {
       instanceRef.current.userMarker = marker;
       map.flyTo([lat, lng], 15, { duration: 1.5 });
       return true;
-    } catch {
+    } catch (error) {
+      console.error('locateUser failed:', error);
       return false;
     }
   }, [getUserLocation, createUserLocationIcon]);
@@ -230,10 +244,10 @@ export function useMap(options: UseMapOptions = {}) {
 
   const renderMarkers = useCallback((spots: Spot[], activeFilter: string) => {
     const map = instanceRef.current.map;
-    if (!map || !window.L || map._loaded === false) return;
+    if (!map || !window.L || (map as any)._loaded === false) return;
 
     // Wait for map to be fully ready
-    if (!map._tiles || map.getZoom() === undefined) {
+    if (!(map as any)._tiles || map.getZoom() === undefined) {
       setTimeout(() => renderMarkers(spots, activeFilter), 100);
       return;
     }

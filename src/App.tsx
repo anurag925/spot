@@ -63,9 +63,23 @@ export default function App() {
     init();
   }, [map]);
 
-  // Load spots on mount
+  // Load spots on mount and when map center changes
   useEffect(() => {
-    loadSpots();
+    const loadSpotsWithLocation = async () => {
+      if (navigator.geolocation) {
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+          });
+          loadSpots(position.coords.latitude, position.coords.longitude);
+        } catch {
+          loadSpots();
+        }
+      } else {
+        loadSpots();
+      }
+    };
+    loadSpotsWithLocation();
   }, [loadSpots]);
 
   // Render markers when spots or filter change
@@ -149,6 +163,7 @@ export default function App() {
   };
 
   const locateUser = async () => {
+    console.log('Locating user...');
     const btn = document.getElementById('locate-btn');
     btn?.classList.add('locating');
 
@@ -185,7 +200,7 @@ export default function App() {
       <Crosshair isActive={isAddMode} />
 
       <div className="ui-layer">
-        <Header onAddSpot={enterAddMode} />
+        <Header onLocate={locateUser} onAddSpot={enterAddMode} />
 
         <FilterPills
           activeFilter={activeFilter}
