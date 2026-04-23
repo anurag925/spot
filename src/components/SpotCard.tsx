@@ -14,7 +14,7 @@ export function SpotCard({ spot, isVisible, onClose, onDirections }: SpotCardPro
   return (
     <div className={`spot-card interactive ${isVisible ? 'visible' : ''}`}>
       <div className="spot-card-handle" />
-      <button className="close-card" onClick={onClose}>
+      <button onClick={onClose}>
         <X size={18} />
       </button>
 
@@ -50,7 +50,7 @@ export function SpotCard({ spot, isVisible, onClose, onDirections }: SpotCardPro
         })}
       </p>
 
-      <button className="direction-btn" onClick={onDirections} title="Get Directions">
+      <button onClick={onDirections} title="Get Directions">
         <Navigation size={18} />
       </button>
     </div>

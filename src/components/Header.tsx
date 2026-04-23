@@ -14,14 +14,13 @@ export function Header({ onLocate, onAddSpot }: HeaderProps) {
       </div>
       <div className="header-actions">
         <button
-          className="icon-btn"
           id="locate-btn"
           onClick={onLocate}
           title="My Location"
         >
           <Crosshair size={20} />
         </button>
-        <button className="add-btn" id="add-btn" onClick={onAddSpot}>
+        <button id="add-btn" onClick={onAddSpot}>
           <Plus size={18} />
           Add Spot
         </button>

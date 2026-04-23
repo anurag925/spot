@@ -7,10 +7,10 @@ interface ConfirmBarProps {
 export function ConfirmBar({ isActive, onCancel, onConfirm }: ConfirmBarProps) {
   return (
     <div className={`confirm-bar interactive ${isActive ? 'active' : ''}`}>
-      <button className="btn-secondary" onClick={onCancel}>
+      <button onClick={onCancel}>
         Cancel
       </button>
-      <button className="btn-primary" onClick={onConfirm}>
+      <button onClick={onConfirm}>
         Confirm Location
       </button>
     </div>

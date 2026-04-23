@@ -3,5 +3,5 @@ interface ToastProps {
 }
 
 export function Toast({ message }: ToastProps) {
-  return <div className={`toast ${message ? 'show' : ''}`}>{message}</div>;
+  return <div>{message}</div>;
 }

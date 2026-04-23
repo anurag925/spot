@@ -34,13 +34,12 @@ export function AddSpotModal({
 
   return (
     <div
-      className={`modal-overlay ${isVisible ? 'active' : ''}`}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="modal interactive">
         <div className="modal-header">
           <h2 className="modal-title">Spot Details</h2>
-          <button className="close-card" id="close-modal" onClick={onClose}>
+          <button id="close-modal" onClick={onClose}>
             <X size={18} />
           </button>
         </div>
@@ -50,7 +49,6 @@ export function AddSpotModal({
             <label className="form-label">Name your spot</label>
             <input
               type="text"
-              className="form-input"
               id="spot-name"
               placeholder="The Secret Garden, Best Tacos Ever..."
               maxLength={50}
@@ -62,7 +60,6 @@ export function AddSpotModal({
           <div className="form-group">
             <label className="form-label">What's the story?</label>
             <textarea
-              className="form-textarea"
               id="spot-story"
               placeholder="This hidden courtyard has the best coffee..."
               maxLength={500}
@@ -91,7 +88,6 @@ export function AddSpotModal({
 
         <div className="modal-footer">
           <button
-            className="submit-btn"
             id="submit-btn"
             disabled={!spotName.trim()}
             onClick={handleSubmit}
