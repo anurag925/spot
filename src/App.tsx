@@ -185,7 +185,7 @@ export default function App() {
       <Crosshair isActive={isAddMode} />
 
       <div className="ui-layer">
-        <Header onLocate={locateUser} onAddSpot={enterAddMode} />
+        <Header onAddSpot={enterAddMode} />
 
         <FilterPills
           activeFilter={activeFilter}
@@ -217,6 +217,7 @@ export default function App() {
           onPanRight={() => map.panMap('right')}
           onZoomIn={map.zoomIn}
           onZoomOut={map.zoomOut}
+          onLocate={locateUser}
         />
       </div>
 
