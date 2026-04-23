@@ -1,5 +1,4 @@
-// @ts-nocheck
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   CATEGORY_COLORS,
   CATEGORY_LABELS,
@@ -141,11 +140,10 @@ export default function App() {
   };
 
   const createMarkerIcon = useCallback((color: string) => {
+    const svgDataUrl = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3C/svg%3E`;
     const svgHTML = `
       <div class="marker-pin" style="background-color: ${color};">
-        <svg class="marker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="4"></circle>
-        </svg>
+        <img class="marker-icon" src="${svgDataUrl}" />
       </div>
     `;
     return L.divIcon({
