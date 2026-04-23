@@ -49,7 +49,7 @@ export function useMap(options: UseMapOptions = {}) {
     // Use a simple marker with only text/size, no external resources
     return window.L.divIcon({
       className: 'custom-marker',
-      html: `<div style="width:24px;height:24px;background:${color};border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>`,
+      html: `<div style="width:24px;height:24px;background:${color};border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4);position:relative;z-index:400;"></div>`,
       iconSize: [24, 24],
       iconAnchor: [12, 12],
     });
@@ -100,9 +100,6 @@ export function useMap(options: UseMapOptions = {}) {
         zoomAnimation: true,
         fadeAnimation: true,
       }).setView([centerLat, centerLng], DEFAULT_ZOOM);
-
-      // Mark as loaded
-      (map as any)._loaded = true;
 
       window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
@@ -244,10 +241,15 @@ export function useMap(options: UseMapOptions = {}) {
 
   const renderMarkers = useCallback((spots: Spot[], activeFilter: string) => {
     const map = instanceRef.current.map;
-    if (!map || !window.L || (map as any)._loaded === false) return;
+    if (!map || !window.L) return;
 
-    // Wait for map to be fully ready
-    if (!(map as any)._tiles || map.getZoom() === undefined) {
+    // Check if map is ready - getZoom returns undefined when not fully initialized
+    try {
+      if (map.getZoom() === undefined) {
+        setTimeout(() => renderMarkers(spots, activeFilter), 100);
+        return;
+      }
+    } catch {
       setTimeout(() => renderMarkers(spots, activeFilter), 100);
       return;
     }
@@ -278,12 +280,8 @@ export function useMap(options: UseMapOptions = {}) {
         options.onMarkerClick?.(spot);
       });
 
-      try {
-        marker.addTo(map);
-        instanceRef.current.markers.push(marker);
-      } catch (error) {
-        console.error('Failed to add marker:', error);
-      }
+      marker.addTo(map);
+      instanceRef.current.markers.push(marker);
     });
   }, [createMarkerIcon, options]);
 

@@ -47,14 +47,14 @@
   z-index: 1;
 }
 
-/* UI Overlay Layer */
+/* UI Overlay Layer - Base for all UI elements */
 .ui-layer {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 10;
+  z-index: 100 !important;
   pointer-events: none;
   display: flex;
   flex-direction: column;
@@ -194,7 +194,7 @@ header {
   width: 40px;
   height: 40px;
   pointer-events: none;
-  z-index: 5;
+  z-index: 101 !important;
   display: none;
   flex-direction: column;
   align-items: center;
@@ -316,7 +316,7 @@ header {
   box-shadow: var(--shadow-lg);
   transform: translateY(120%);
   transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-  z-index: 20;
+  z-index: 200 !important;
 }
 
 .spot-card.visible {
@@ -405,7 +405,7 @@ header {
   background: rgba(0,0,0,0.4);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  z-index: 30;
+  z-index: 300 !important;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -555,7 +555,7 @@ header {
   pointer-events: none;
   transition: all 0.3s;
   box-shadow: var(--shadow-sm);
-  z-index: 100;
+  z-index: 400 !important;
 }
 
 .toast.show {
@@ -569,7 +569,7 @@ header {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 5;
+  z-index: 102 !important;
   text-align: center;
   pointer-events: none;
   background: var(--surface-glass);
@@ -587,6 +587,17 @@ header {
   background: transparent !important;
   color: #999 !important;
   font-size: 10px !important;
+}
+
+/* Leaflet pane z-index - simplified */
+.leaflet-tile-pane { z-index: 1; }
+.leaflet-marker-pane { z-index: 50 !important; }
+
+/* Custom marker styles */
+.leaflet-marker-icon { z-index: 50 !important; }
+.custom-marker {
+  background: transparent !important;
+  border: none !important;
 }
 
 /* Ensure Leaflet map container fills parent */
